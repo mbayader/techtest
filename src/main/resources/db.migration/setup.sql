@@ -1,5 +1,7 @@
 create sequence if not exists SEQ_DATA_HEADER;
 
+drop table if exists DATA_STORE;
+
 drop table if exists DATA_HEADER;
 
 create table DATA_HEADER
@@ -13,8 +15,6 @@ create table DATA_HEADER
 );
 
 create sequence if not exists SEQ_DATA_STORE;
-
-drop table if exists DATA_STORE;
 
 create table DATA_STORE
 (

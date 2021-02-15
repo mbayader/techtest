@@ -11,6 +11,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
@@ -54,4 +55,8 @@ public class EmbeddedDataSourceConfiguration {
         return new PersistenceExceptionTranslationPostProcessor();
     }
 
+    @Bean
+    public TransactionTemplate transactionTemplate(JpaTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
 }

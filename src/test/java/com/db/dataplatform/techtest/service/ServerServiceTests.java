@@ -1,6 +1,8 @@
 package com.db.dataplatform.techtest.service;
 
 import com.db.dataplatform.techtest.server.api.model.DataEnvelope;
+import com.db.dataplatform.techtest.server.component.DataLakeApiClient;
+import com.db.dataplatform.techtest.server.exception.HadoopClientException;
 import com.db.dataplatform.techtest.server.mapper.DataEnvelopeConverter;
 import com.db.dataplatform.techtest.server.mapper.ServerMapperConfiguration;
 import com.db.dataplatform.techtest.server.persistence.BlockTypeEnum;
@@ -18,6 +20,8 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.modelmapper.ModelMapper;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +38,7 @@ import static com.db.dataplatform.techtest.TestDataHelper.createTestDataHeaderEn
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -49,7 +54,12 @@ public class ServerServiceTests {
 
     @Mock
     private DataBodyService dataBodyServiceMock;
+    @Mock
+    private PlatformTransactionManager transactionManager;
+    @Mock
+    private DataLakeApiClient dataLakeApiClientMocked;
 
+    private TransactionTemplate transactionTemplate;
     private ModelMapper modelMapper;
 
     private DataBodyEntity expectedDataBodyEntity;
@@ -67,8 +77,9 @@ public class ServerServiceTests {
         testDataEnvelope = createTestDataEnvelopeApiObject();
         expectedDataBodyEntity = modelMapper.map(testDataEnvelope.getDataBody(), DataBodyEntity.class);
         expectedDataBodyEntity.setDataHeaderEntity(modelMapper.map(testDataEnvelope.getDataHeader(), DataHeaderEntity.class));
+        transactionTemplate = new TransactionTemplate(transactionManager);
 
-        server = new ServerImpl(dataBodyServiceMock, modelMapper);
+        server = new ServerImpl(dataBodyServiceMock, modelMapper,transactionTemplate, dataLakeApiClientMocked);
     }
 
     @Test
@@ -77,6 +88,19 @@ public class ServerServiceTests {
 
         assertThat(success).isTrue();
         verify(dataBodyServiceMock, times(1)).saveDataBody(eq(expectedDataBodyEntity));
+        verify(dataLakeApiClientMocked, times(1)).save(eq(testDataEnvelope));
+        verify(transactionManager, times(1)).commit(any());
+    }
+
+    @Test
+    public void shouldRollbackWhenDataLakeFailsToSave() throws NoSuchAlgorithmException, IOException {
+
+        doThrow(HadoopClientException.class).when(dataLakeApiClientMocked).save(eq(testDataEnvelope));
+        boolean failed = server.saveDataEnvelope(testDataEnvelope);
+
+        assertThat(failed).isFalse();
+        verify(dataBodyServiceMock, times(1)).saveDataBody(eq(expectedDataBodyEntity));
+        verify(transactionManager, times(1)).rollback(any());
     }
 
     @Test

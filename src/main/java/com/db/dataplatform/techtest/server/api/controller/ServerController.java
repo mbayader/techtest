@@ -42,7 +42,7 @@ public class ServerController {
     }
 
     @GetMapping(value = "/data/{blockType}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<DataEnvelope>> retrieveData(@Valid @PathVariable("blockType") BlockTypeEnum blockType) throws IOException, NoSuchAlgorithmException {
+    public ResponseEntity<List<DataEnvelope>> retrieveData(@PathVariable("blockType") BlockTypeEnum blockType) throws IOException, NoSuchAlgorithmException {
 
         log.info("Retrieve Data envelope by blockType: {}", blockType);
         List<DataEnvelope> dataEnvelopes = server.retrieveDataEnvelope(blockType);

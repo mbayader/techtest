@@ -1,6 +1,8 @@
 package com.db.dataplatform.techtest.server.component.impl;
 
 import com.db.dataplatform.techtest.server.api.model.DataEnvelope;
+import com.db.dataplatform.techtest.server.component.DataLakeApiClient;
+import com.db.dataplatform.techtest.server.exception.HadoopClientException;
 import com.db.dataplatform.techtest.server.persistence.BlockTypeEnum;
 import com.db.dataplatform.techtest.server.persistence.model.DataBodyEntity;
 import com.db.dataplatform.techtest.server.persistence.model.DataHeaderEntity;
@@ -11,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,24 +28,37 @@ public class ServerImpl implements Server {
 
     private final DataBodyService dataBodyService;
     private final ModelMapper modelMapper;
+    private final TransactionTemplate transactionTemplate;
+    private final DataLakeApiClient dataLakeApiClient;
 
-    /**
-     * @param envelope
-     * @return true if there is a match with the client provided checksum.
-     */
-    @Override
-    public boolean saveDataEnvelope(DataEnvelope envelope) {
+  /**
+   * @param envelope DataBody to save
+   * @return true if there is a match with the client provided checksum.
+   */
+  @Override
+  public boolean saveDataEnvelope(DataEnvelope envelope) {
 
-        String calculateMd5 = calculateMd5(envelope.getDataBody().getDataBody());
+    String calculateMd5 = calculateMd5(envelope.getDataBody().getDataBody());
 
-        if (MD5_CHECKSUM.equals(calculateMd5)) {
-            // Save to persistence.
-            persist(envelope);
-            log.info("Data persisted successfully, data name: {}", envelope.getDataHeader().getName());
-            return true;
-        }
-        return false;
+    if (!MD5_CHECKSUM.equals(calculateMd5)) {
+      return false;
     }
+
+    try {
+        return Optional.ofNullable( transactionTemplate.execute( status -> {
+                    // Save to persistence.
+                    persist(envelope);
+                    dataLakeApiClient.save(envelope);
+
+                    log.info("Data persisted successfully, data name: {}", envelope.getDataHeader().getName());
+
+                    return true;
+                  })).orElse(false);
+    } catch (HadoopClientException ex) {
+      log.error(ex.getMessage(), ex);
+      return false;
+    }
+  }
 
     private String calculateMd5(String dataBody) {
         return DigestUtils.md5Hex(dataBody);
