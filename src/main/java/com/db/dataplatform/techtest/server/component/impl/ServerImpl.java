@@ -7,8 +7,11 @@ import com.db.dataplatform.techtest.server.service.DataBodyService;
 import com.db.dataplatform.techtest.server.component.Server;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+
+import static com.db.dataplatform.techtest.TechTestApplication.MD5_CHECKSUM;
 
 @Slf4j
 @Service
@@ -25,11 +28,19 @@ public class ServerImpl implements Server {
     @Override
     public boolean saveDataEnvelope(DataEnvelope envelope) {
 
-        // Save to persistence.
-        persist(envelope);
+        String calculateMd5 = calculateMd5(envelope.getDataBody().getDataBody());
 
-        log.info("Data persisted successfully, data name: {}", envelope.getDataHeader().getName());
-        return true;
+        if (MD5_CHECKSUM.equals(calculateMd5)) {
+            // Save to persistence.
+            persist(envelope);
+            log.info("Data persisted successfully, data name: {}", envelope.getDataHeader().getName());
+            return true;
+        }
+        return false;
+    }
+
+    private String calculateMd5(String dataBody) {
+        return DigestUtils.md5Hex(dataBody);
     }
 
     private void persist(DataEnvelope envelope) {

@@ -34,15 +34,19 @@ public class TestDataHelper {
         DataBody dataBody = new DataBody(DUMMY_DATA);
         DataHeader dataHeader = new DataHeader(TEST_NAME, BlockTypeEnum.BLOCKTYPEA);
 
-        DataEnvelope dataEnvelope = new DataEnvelope(dataHeader, dataBody);
-        return dataEnvelope;
+        return new DataEnvelope(dataHeader, dataBody);
     }
 
     public static DataEnvelope createTestDataEnvelopeApiObjectWithEmptyName() {
         DataBody dataBody = new DataBody(DUMMY_DATA);
         DataHeader dataHeader = new DataHeader(TEST_NAME_EMPTY, BlockTypeEnum.BLOCKTYPEA);
 
-        DataEnvelope dataEnvelope = new DataEnvelope(dataHeader, dataBody);
-        return dataEnvelope;
+        return new DataEnvelope(dataHeader, dataBody);
+    }
+    public static DataEnvelope createTestDataEnvelopeApiObjectWithInvalidChecksum() {
+        DataBody dataBody = new DataBody("Body with invalid MD5_CHECKSUM");
+        DataHeader dataHeader = new DataHeader(TEST_NAME, BlockTypeEnum.BLOCKTYPEA);
+
+        return new DataEnvelope(dataHeader, dataBody);
     }
 }

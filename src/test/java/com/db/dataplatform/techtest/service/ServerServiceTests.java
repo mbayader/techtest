@@ -18,8 +18,11 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataEnvelopeApiObject;
+import static com.db.dataplatform.techtest.TestDataHelper.createTestDataEnvelopeApiObjectWithInvalidChecksum;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -27,7 +30,7 @@ import static org.mockito.Mockito.verify;
 public class ServerServiceTests {
 
     @Mock
-    private DataBodyService dataBodyServiceImplMock;
+    private DataBodyService dataBodyServiceMock;
 
     private ModelMapper modelMapper;
 
@@ -45,7 +48,7 @@ public class ServerServiceTests {
         expectedDataBodyEntity = modelMapper.map(testDataEnvelope.getDataBody(), DataBodyEntity.class);
         expectedDataBodyEntity.setDataHeaderEntity(modelMapper.map(testDataEnvelope.getDataHeader(), DataHeaderEntity.class));
 
-        server = new ServerImpl(dataBodyServiceImplMock, modelMapper);
+        server = new ServerImpl(dataBodyServiceMock, modelMapper);
     }
 
     @Test
@@ -53,6 +56,16 @@ public class ServerServiceTests {
         boolean success = server.saveDataEnvelope(testDataEnvelope);
 
         assertThat(success).isTrue();
-        verify(dataBodyServiceImplMock, times(1)).saveDataBody(eq(expectedDataBodyEntity));
+        verify(dataBodyServiceMock, times(1)).saveDataBody(eq(expectedDataBodyEntity));
+    }
+
+    @Test
+    public void shouldNotSaveDataEnvelopeWhenCheckSumNotMatch() throws NoSuchAlgorithmException, IOException {
+        DataEnvelope testDataEnvelopeWithNotMatchChecksum = createTestDataEnvelopeApiObjectWithInvalidChecksum();
+
+        boolean failed = server.saveDataEnvelope(testDataEnvelopeWithNotMatchChecksum);
+
+        assertThat(failed).isFalse();
+        verify(dataBodyServiceMock, never()).saveDataBody(any(DataBodyEntity.class));
     }
 }
