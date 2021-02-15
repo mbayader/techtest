@@ -16,12 +16,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.util.UriTemplate;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -41,11 +41,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest
+@TestPropertySource(properties = "{data.uri:http://some-server:8090/dataserver}")
 public class ServerControllerComponentTest {
 
-	public static final String URI_PUSHDATA = "http://localhost:8090/dataserver/pushdata";
-	public static final UriTemplate URI_GETDATA = new UriTemplate("http://localhost:8090/dataserver/data/{blockType}");
-	public static final UriTemplate URI_PUTDATA = new UriTemplate("http://localhost:8090/dataserver/update/{name}");
+	private static final String URI_DATA = "http://some-server:8090/dataserver";
+	private static final String URI_PUSHDATA = URI_DATA + "/pushdata";
+	private static final String URI_GETDATA  = URI_DATA + "/data/{blockType}";
+	private static final String URI_PUTDATA  = URI_DATA + "/update/{name}";
 
 	@MockBean
 	private Client client;
@@ -98,7 +100,7 @@ public class ServerControllerComponentTest {
 		when(serverMock.retrieveDataEnvelope(eq(blockTypeA)))
 				.thenReturn(dataEnvelopes);
 
-		MvcResult mvcResult = mockMvc.perform(get(URI_GETDATA.toString(), blockTypeA.name())
+		MvcResult mvcResult = mockMvc.perform(get(URI_GETDATA, blockTypeA.name())
 				.content(dataEnvelopesAsString)
 				.contentType(MediaType.APPLICATION_JSON_VALUE))
 				.andExpect(status().isOk())
@@ -113,7 +115,7 @@ public class ServerControllerComponentTest {
 		when(serverMock.updateDataBlockType(eq(TEST_NAME), eq(BlockTypeEnum.BLOCKTYPEA)))
 				.thenReturn(true);
 
-		MvcResult mvcResult = mockMvc.perform(put(URI_PUTDATA.toString(), TEST_NAME)
+		MvcResult mvcResult = mockMvc.perform(put(URI_PUTDATA, TEST_NAME)
 				.content(BlockTypeEnum.BLOCKTYPEA.name())
 				.contentType(MediaType.APPLICATION_JSON_VALUE))
 				.andExpect(status().isOk())
@@ -127,7 +129,7 @@ public class ServerControllerComponentTest {
 	@Test
 	public void testUpdateDataPutCallWorksAsExpectedWithInvalidName() throws Exception {
 
-		mockMvc.perform(put(URI_PUTDATA.toString(), "	")
+		mockMvc.perform(put(URI_PUTDATA, "	")
 				.content(BlockTypeEnum.BLOCKTYPEA.name())
 				.contentType(MediaType.APPLICATION_JSON_VALUE))
 				.andExpect(status().isConflict())
