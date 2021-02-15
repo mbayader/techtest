@@ -13,9 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataBodyEntity;
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataHeaderEntity;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,4 +58,13 @@ public class DataBodyServiceTests {
                 .findByBlockType(eq(BlockTypeEnum.BLOCKTYPEA));
     }
 
+    @Test
+    public void shouldReturnEmptyOptionalWhenNotFound(){
+        Optional<DataBodyEntity> actual = dataBodyService.getDataByBlockName(TEST_NAME_NO_RESULT);
+
+        verify(dataStoreRepositoryMock, times(1))
+                .findByBlockName(eq(TEST_NAME_NO_RESULT));
+
+        assertThat(actual).isEmpty();
+    }
 }

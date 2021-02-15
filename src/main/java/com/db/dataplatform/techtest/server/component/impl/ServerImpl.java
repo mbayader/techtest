@@ -13,6 +13,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.db.dataplatform.techtest.TechTestApplication.MD5_CHECKSUM;
@@ -67,5 +68,18 @@ public class ServerImpl implements Server {
         return byBlockType.stream()
                 .map(dataBodyEntity -> modelMapper.map(dataBodyEntity, DataEnvelope.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean updateDataBlockType(String blockName, BlockTypeEnum blockType) {
+        Optional<DataBodyEntity> dataByBlockName = dataBodyService.getDataByBlockName(blockName);
+
+        if (dataByBlockName.isPresent()) {
+            DataBodyEntity dataBodyEntity = dataByBlockName.get();
+            dataBodyEntity.getDataHeaderEntity().setBlocktype(blockType);
+            dataBodyService.saveDataBody(dataBodyEntity);
+            return true;
+        }
+        return false;
     }
 }

@@ -6,7 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriTemplate;
@@ -28,7 +30,7 @@ public class ClientImpl implements Client {
 
     public static final String URI_PUSHDATA = "http://localhost:8090/dataserver/pushdata";
     public static final UriTemplate URI_GETDATA = new UriTemplate("http://localhost:8090/dataserver/data/{blockType}");
-    public static final UriTemplate URI_PATCHDATA = new UriTemplate("http://localhost:8090/dataserver/update/{name}/{newBlockType}");
+    public static final UriTemplate URI_PUTDATA = new UriTemplate("http://localhost:8090/dataserver/update/{name}");
 
     @Override
     public void pushData(DataEnvelope dataEnvelope) {
@@ -60,8 +62,19 @@ public class ClientImpl implements Client {
     @Override
     public boolean updateData(String blockName, String newBlockType) {
         log.info("Updating blocktype to {} for block with name {}", newBlockType, blockName);
-        return true;
+
+        HashMap<String, Object> uriVariables = new HashMap<>();
+        uriVariables.put("name", blockName);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+
+        HttpEntity<String> request = new HttpEntity<>(newBlockType, headers);
+
+        return restTemplate.exchange(URI_PUTDATA.expand(uriVariables),
+                HttpMethod.PUT,
+                request,
+                new ParameterizedTypeReference<Boolean>() {})
+                .getBody();
     }
-
-
 }

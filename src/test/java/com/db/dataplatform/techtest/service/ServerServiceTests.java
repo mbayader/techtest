@@ -12,6 +12,9 @@ import com.db.dataplatform.techtest.server.component.impl.ServerImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.modelmapper.ModelMapper;
@@ -21,7 +24,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import static com.db.dataplatform.techtest.TestDataHelper.TEST_NAME;
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataBodyEntity;
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataEnvelopeApiObject;
 import static com.db.dataplatform.techtest.TestDataHelper.createTestDataEnvelopeApiObjectWithInvalidChecksum;
@@ -29,6 +34,7 @@ import static com.db.dataplatform.techtest.TestDataHelper.createTestDataHeaderEn
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +42,10 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ServerServiceTests {
+
+    private InOrder inOrder;
+    @Captor
+    ArgumentCaptor<DataBodyEntity> argumentCaptor;
 
     @Mock
     private DataBodyService dataBodyServiceMock;
@@ -51,6 +61,8 @@ public class ServerServiceTests {
     public void setup() {
         ServerMapperConfiguration serverMapperConfiguration = new ServerMapperConfiguration();
         modelMapper = serverMapperConfiguration.createModelMapperBean(Collections.singleton(new DataEnvelopeConverter()));
+
+        inOrder = inOrder(dataBodyServiceMock);
 
         testDataEnvelope = createTestDataEnvelopeApiObject();
         expectedDataBodyEntity = modelMapper.map(testDataEnvelope.getDataBody(), DataBodyEntity.class);
@@ -89,5 +101,38 @@ public class ServerServiceTests {
 
         assertThat(results).containsExactly(testDataEnvelope);
         verify(dataBodyServiceMock, times(1)).getDataByBlockType(testBlockTypeA);
+    }
+
+    @Test
+    public void shouldUpdateDataEnvelopeBlockTypeByBlockName() throws NoSuchAlgorithmException, IOException{
+        BlockTypeEnum toUpdateBlockTypeB = BlockTypeEnum.BLOCKTYPEB;
+
+        DataBodyEntity testDataBodyEntity = createTestDataBodyEntity(createTestDataHeaderEntity(Instant.now()));
+
+        when(dataBodyServiceMock.getDataByBlockName(TEST_NAME)).thenReturn(Optional.of(testDataBodyEntity));
+
+        testDataBodyEntity.getDataHeaderEntity().setBlocktype(toUpdateBlockTypeB);
+
+        boolean success = server.updateDataBlockType(TEST_NAME, toUpdateBlockTypeB);
+
+        assertThat(success).isTrue();
+        verify(dataBodyServiceMock, times(1)).getDataByBlockName(TEST_NAME);
+        verify(dataBodyServiceMock, times(1)).saveDataBody(argumentCaptor.capture());
+        inOrder.verify(dataBodyServiceMock).getDataByBlockName(TEST_NAME);
+        inOrder.verify(dataBodyServiceMock).saveDataBody(testDataBodyEntity);
+        assertThat(argumentCaptor.getValue()).isEqualTo(testDataBodyEntity);
+    }
+
+    @Test
+    public void shouldReturnFalseWhenNotFoundByBlockName() throws NoSuchAlgorithmException, IOException{
+        BlockTypeEnum toUpdateBlockTypeB = BlockTypeEnum.BLOCKTYPEB;
+
+        when(dataBodyServiceMock.getDataByBlockName(TEST_NAME)).thenReturn(Optional.empty());
+
+        boolean success = server.updateDataBlockType(TEST_NAME, toUpdateBlockTypeB);
+
+        assertThat(success).isFalse();
+        verify(dataBodyServiceMock, times(1)).getDataByBlockName(TEST_NAME);
+        verify(dataBodyServiceMock, never()).saveDataBody(any());
     }
 }

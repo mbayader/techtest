@@ -1,6 +1,7 @@
 package com.db.dataplatform.techtest.api.controller;
 
 import com.db.dataplatform.techtest.TestDataHelper;
+import com.db.dataplatform.techtest.client.component.Client;
 import com.db.dataplatform.techtest.server.api.controller.ServerController;
 import com.db.dataplatform.techtest.server.api.model.DataEnvelope;
 import com.db.dataplatform.techtest.server.exception.HadoopClientException;
@@ -10,12 +11,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.util.UriTemplate;
 
 import java.io.IOException;
@@ -23,34 +28,41 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.List;
 
+import static com.db.dataplatform.techtest.TestDataHelper.TEST_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest
 public class ServerControllerComponentTest {
 
 	public static final String URI_PUSHDATA = "http://localhost:8090/dataserver/pushdata";
 	public static final UriTemplate URI_GETDATA = new UriTemplate("http://localhost:8090/dataserver/data/{blockType}");
-	public static final UriTemplate URI_PATCHDATA = new UriTemplate("http://localhost:8090/dataserver/update/{name}/{newBlockType}");
+	public static final UriTemplate URI_PUTDATA = new UriTemplate("http://localhost:8090/dataserver/update/{name}");
 
-	@Mock
+	@MockBean
+	private Client client;
+	@MockBean
 	private Server serverMock;
 
 	private DataEnvelope testDataEnvelope;
 	private ObjectMapper objectMapper;
 	private MockMvc mockMvc;
+	@Autowired
 	private ServerController serverController;
+	@Autowired
+	private WebApplicationContext context;
 
 	@Before
 	public void setUp() throws HadoopClientException, NoSuchAlgorithmException, IOException {
-		serverController = new ServerController(serverMock);
-		mockMvc = standaloneSetup(serverController).build();
+		mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
 		objectMapper = Jackson2ObjectMapperBuilder
 				.json()
 				.build();
@@ -93,5 +105,32 @@ public class ServerControllerComponentTest {
 				.andReturn();
 
 		assertThat(mvcResult.getResponse().getContentAsString()).isEqualTo(dataEnvelopesAsString);
+	}
+
+	@Test
+	public void testUpdateDataPutCallWorksAsExpected() throws Exception {
+
+		when(serverMock.updateDataBlockType(eq(TEST_NAME), eq(BlockTypeEnum.BLOCKTYPEA)))
+				.thenReturn(true);
+
+		MvcResult mvcResult = mockMvc.perform(put(URI_PUTDATA.toString(), TEST_NAME)
+				.content(BlockTypeEnum.BLOCKTYPEA.name())
+				.contentType(MediaType.APPLICATION_JSON_VALUE))
+				.andExpect(status().isOk())
+				.andExpect(content().string("true"))
+				.andReturn();
+
+		boolean updateData = Boolean.parseBoolean(mvcResult.getResponse().getContentAsString());
+		assertThat(updateData).isTrue();
+	}
+
+	@Test
+	public void testUpdateDataPutCallWorksAsExpectedWithInvalidName() throws Exception {
+
+		mockMvc.perform(put(URI_PUTDATA.toString(), "	")
+				.content(BlockTypeEnum.BLOCKTYPEA.name())
+				.contentType(MediaType.APPLICATION_JSON_VALUE))
+				.andExpect(status().isConflict())
+				.andReturn();
 	}
 }

@@ -14,4 +14,7 @@ public interface DataStoreRepository extends JpaRepository<DataBodyEntity, Long>
 
     @Query("from DataBodyEntity db join db.dataHeaderEntity dh where dh.blocktype=:blockType")
     List<DataBodyEntity> findByBlockType(@Param("blockType") BlockTypeEnum blockType);
+
+    @Query("from DataBodyEntity db join db.dataHeaderEntity dh where dh.name=:blockName")
+    DataBodyEntity findByBlockName(@Param("blockName") String blockName);
 }
