@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriTemplate;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Client code does not require any test coverage
@@ -43,7 +45,16 @@ public class ClientImpl implements Client {
     @Override
     public List<DataEnvelope> getData(String blockType) {
         log.info("Query for data with header block type {}", blockType);
-        return null;
+
+        Map<String, Object> uriVariables = new HashMap<>();
+        uriVariables.put("blockType", blockType);
+
+        return restTemplate.exchange(
+                URI_GETDATA.expand(uriVariables),
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<DataEnvelope>>() {})
+                .getBody();
     }
 
     @Override

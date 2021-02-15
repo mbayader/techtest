@@ -1,6 +1,7 @@
 package com.db.dataplatform.techtest.server.component.impl;
 
 import com.db.dataplatform.techtest.server.api.model.DataEnvelope;
+import com.db.dataplatform.techtest.server.persistence.BlockTypeEnum;
 import com.db.dataplatform.techtest.server.persistence.model.DataBodyEntity;
 import com.db.dataplatform.techtest.server.persistence.model.DataHeaderEntity;
 import com.db.dataplatform.techtest.server.service.DataBodyService;
@@ -11,6 +12,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static com.db.dataplatform.techtest.TechTestApplication.MD5_CHECKSUM;
 
 @Slf4j
@@ -18,7 +22,7 @@ import static com.db.dataplatform.techtest.TechTestApplication.MD5_CHECKSUM;
 @RequiredArgsConstructor
 public class ServerImpl implements Server {
 
-    private final DataBodyService dataBodyServiceImpl;
+    private final DataBodyService dataBodyService;
     private final ModelMapper modelMapper;
 
     /**
@@ -54,7 +58,14 @@ public class ServerImpl implements Server {
     }
 
     private void saveData(DataBodyEntity dataBodyEntity) {
-        dataBodyServiceImpl.saveDataBody(dataBodyEntity);
+        dataBodyService.saveDataBody(dataBodyEntity);
     }
 
+    @Override
+    public List<DataEnvelope> retrieveDataEnvelope(BlockTypeEnum blockType) {
+        List<DataBodyEntity> byBlockType = dataBodyService.getDataByBlockType(blockType);
+        return byBlockType.stream()
+                .map(dataBodyEntity -> modelMapper.map(dataBodyEntity, DataEnvelope.class))
+                .collect(Collectors.toList());
+    }
 }
