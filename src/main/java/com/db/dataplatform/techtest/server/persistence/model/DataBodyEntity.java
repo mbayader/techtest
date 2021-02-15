@@ -1,5 +1,6 @@
 package com.db.dataplatform.techtest.server.persistence.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,6 +21,7 @@ import java.time.Instant;
 @Table(name = "DATA_STORE")
 @Setter
 @Getter
+@EqualsAndHashCode(exclude = "createdTimestamp")
 public class DataBodyEntity {
 
     @Id

@@ -1,6 +1,7 @@
 package com.db.dataplatform.techtest.server.persistence.model;
 
 import com.db.dataplatform.techtest.server.persistence.BlockTypeEnum;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,6 +24,7 @@ import java.time.Instant;
 )
 @Setter
 @Getter
+@EqualsAndHashCode(exclude = "createdTimestamp")
 public class DataHeaderEntity {
 
     @Id
